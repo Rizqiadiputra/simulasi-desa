@@ -6,6 +6,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   for (const k of ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN']) if (env[k] && !process.env[k]) process.env[k] = env[k];
   return {
+    // GitHub Pages project site: https://radiputra.biz.id/simulasi-desa/
+    base: mode === 'production' ? '/simulasi-desa/' : '/',
     server: { host: true, port: 5173 },
     build: { target: 'es2020', chunkSizeWarningLimit: 1200 },
     plugins: [chatApiPlugin()],
