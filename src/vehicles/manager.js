@@ -5,7 +5,7 @@ import { findPath } from '../npc/pathfinding.js';
 import { cellToWorld, worldToCell } from '../data/config.js';
 import { doorCell } from '../simulation/grid.js';
 import { T } from '../simulation/grid.js';
-import { horseLineOk, horseBodyOk } from './rules.js';
+import { horseLineOk, horseBodyOk, horseTurn, horseTurnDir } from './rules.js';
 
 const HORSE_NAMES = ['Si Sembrani', 'Si Bayu', 'Si Jagad', 'Si Turangga', 'Si Kilat', 'Si Mega', 'Si Gendhis', 'Si Wilis', 'Si Lintang'];
 const ROUTE_TYPES = ['istal', 'rumah_akuwu', 'pendopo', 'pasar', 'terakota', 'pande', 'pos_jaga'];
@@ -68,7 +68,11 @@ export class VehicleManager {
       const { i, j } = worldToCell(x, z);
       const t = this.grid.get(i, j);
       if (t !== T.GRASS && t !== T.ROAD) continue;
-      if (h.x === undefined || horseLineOk(this.grid, h.x, h.z, x, z)) return { x, z };
+      if (h.x === undefined) { if (horseBodyOk(this.grid, x, z, h.yaw)) return { x, z }; continue; }
+      if (!horseLineOk(this.grid, h.x, h.z, x, z)) continue;
+      // badan harus bisa diputar di tempat menghadap tujuan (tidak mentok di kedua sisi)
+      const dir = horseTurnDir(this.grid, h.x, h.z, h.yaw, Math.atan2(x - h.x, z - h.z));
+      if (dir) return { x, z, dir };
     }
     return null;
   }
@@ -90,11 +94,22 @@ export class VehicleManager {
     if (h.path.length) {
       const p = h.path[0], dx = p.x - h.x, dz = p.z - h.z, d = Math.hypot(dx, dz);
       const step = (h.mode === 'return' ? 2.6 : 1.1) * dt;
-      if (d <= step) { h.x = p.x; h.z = p.z; h.path.shift(); if (!h.path.length) { h.mode = 'idle'; h.t = rnd(2, 5); } }
-      else {
-        const nx = h.x + (dx / d) * step, nz = h.z + (dz / d) * step, ny = angLerp(h.yaw, Math.atan2(dx, dz), Math.min(1, dt * 5));
-        if (h.mode === 'return' || horseBodyOk(this.grid, nx, nz, ny)) { h.x = nx; h.z = nz; h.yaw = ny; }
-        else { h.path = []; h.mode = 'idle'; h.t = rnd(1, 3); } // ada bangunan di depan: berhenti
+      if (d <= step) { h.x = p.x; h.z = p.z; h.path.shift(); h.stuck = 0; if (!h.path.length) { h.mode = 'idle'; h.t = rnd(2, 5); } }
+      else if (h.mode === 'return') {
+        h.x += (dx / d) * step; h.z += (dz / d) * step;
+        h.yaw = angLerp(h.yaw, Math.atan2(dx, dz), Math.min(1, dt * 5));
+      } else {
+        // putar badan dulu di tempat (lewat sisi yang tidak mentok), baru melangkah lurus
+        const target = Math.atan2(dx, dz);
+        const r = horseTurn(this.grid, h.x, h.z, h.yaw, target, dt * 2.5, h.turnDir || 0);
+        let off = 9;
+        if (r) { h.yaw = r.yaw; h.turnDir = r.dir; off = Math.abs(angLerp(r.yaw, target, 1) - r.yaw); }
+        if (off < 0.12) {
+          const nx = h.x + Math.sin(h.yaw) * step, nz = h.z + Math.cos(h.yaw) * step;
+          if (horseBodyOk(this.grid, nx, nz, h.yaw)) { h.x = nx; h.z = nz; off = 0; }
+          else off = 9;
+        }
+        if (off === 9) { h.path = []; h.mode = 'idle'; h.t = rnd(1, 3); h.stuck = (h.stuck || 0) + 1; } // mentok: berhenti
       }
       moving = h.path.length > 0;
       h.phase += dt * (h.mode === 'return' ? 9 : 5);
@@ -102,11 +117,25 @@ export class VehicleManager {
       h.t -= dt;
       if (h.t <= 0) {
         if (Math.random() < 0.45) { h.mode = 'graze'; h.t = rnd(4, 9); }
-        else { const w = this.wanderTarget(h); if (w) { h.path = [w]; h.mode = 'walk'; } else h.t = 2; }
+        else {
+          const w = h.stuck >= 4 ? null : this.wanderTarget(h);
+          if (w) { h.path = [{ x: w.x, z: w.z }]; h.mode = 'walk'; h.turnDir = w.dir; }
+          else if ((h.stuck = (h.stuck || 0) + 1) >= 4) this.unstick(h, homeD);
+          else h.t = 2;
+        }
       }
     }
     h.graze += ((h.mode === 'graze' ? 1 : 0) - h.graze) * Math.min(1, dt * 2);
     this.placeHorse(h, moving ? (h.mode === 'return' ? 1 : 0.6) : 0);
+  }
+
+  // terjebak berkali-kali: pulang ke pintu istal lewat jalan (mode return menembus pojok sempit)
+  unstick(h, homeD) {
+    h.stuck = 0;
+    const s = worldToCell(h.x, h.z);
+    const p = findPath(this.grid, s.i, s.j, homeD.cell[0], homeD.cell[1]);
+    if (p && p.length > 1) { h.path = p.slice(1).map(([i, j]) => cellToWorld(i, j)); h.mode = 'return'; }
+    else { h.path = [{ x: homeD.x, z: homeD.z }]; h.mode = 'return'; }
   }
 
   placeHorse(h, amp) {

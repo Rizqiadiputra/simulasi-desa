@@ -5,7 +5,7 @@ import { passableCells } from '../simulation/grid.js';
 import { seeThrough } from '../scene/seeThrough.js';
 import { T } from '../simulation/grid.js';
 import { animateHorse } from '../vehicles/models.js';
-import { horseBodyOk } from '../vehicles/rules.js';
+import { horseBodyOk, horseTurn, horseTurnDir } from '../vehicles/rules.js';
 
 const angLerp = (a, b, t) => { let d = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI; if (d < -Math.PI) d += Math.PI * 2; return a + d * t; };
 
@@ -299,15 +299,43 @@ export class Player {
     const target = Math.atan2(dx, dz);
     const cur = p.yaw || 0;
     const stuck = this.blockedAt(p.x, p.z, feet);
+    // ±9 rad/detik; kalau sisi terpendek mentok bangunan, putar lewat sisi satunya
+    // arah putar dipertahankan selama arah tujuan tidak berubah banyak (anti bolak-balik di pojok)
+    if (this.turnTarget === undefined || Math.abs(Math.atan2(Math.sin(target - this.turnTarget), Math.cos(target - this.turnTarget))) > 0.6) { this.turnDir = 0; this.forceTurn = false; }
+    this.turnTarget = target;
     let diff = ((target - cur + Math.PI) % (Math.PI * 2)) - Math.PI;
     if (diff < -Math.PI) diff += Math.PI * 2;
-    const turn = Math.sign(diff) * Math.min(Math.abs(diff), dt * 9); // ±9 rad/detik
-    const ny = cur + turn;
-    if (stuck || horseBodyOk(this.grid, p.x, p.z, ny)) p.yaw = ny;
+    const forced = () => cur + Math.sign(diff) * Math.min(Math.abs(diff), dt * 9);
+    // jaring pengaman (celah sempit): putar paksa di tempat sampai lurus, tanpa maju dulu
+    if (this.forceTurn) {
+      p.yaw = forced();
+      if (Math.abs(diff) <= dt * 9) this.forceTurn = false;
+      return;
+    }
+    // pilih sisi putar yang tidak mentok sampai menghadap tujuan; tidak ada -> mundur dulu
+    if (!this.turnDir) this.turnDir = horseTurnDir(this.grid, p.x, p.z, cur, target);
+    const r = this.turnDir ? horseTurn(this.grid, p.x, p.z, cur, target, dt * 9, this.turnDir) : null;
+    let ny = r ? r.yaw : null;
+    this.turnDir = r ? r.dir : 0;
+    // tidak bisa berputar > 0,8 detik padahal arah tujuan lapang -> putar paksa (tidak terkunci selamanya)
+    this.noTurnT = ny === null ? (this.noTurnT || 0) + dt : 0;
+    if (ny === null && !stuck && this.noTurnT > 0.8 && horseBodyOk(this.grid, p.x, p.z, target)) { this.forceTurn = true; this.noTurnT = 0; return; }
+    if (ny === null && stuck) ny = forced();
+    if (ny !== null) { p.yaw = ny; this.shuffle = 0; }
     else {
-      // terlalu mepet untuk berputar: mundur sedikit dulu
-      const bx = p.x - Math.sin(cur) * step * 0.5, bz = p.z - Math.cos(cur) * step * 0.5;
-      if (!this.blockedAt(bx, bz, feet)) { p.x = bx; p.z = bz; }
+      // terlalu mepet untuk berputar: geser sedikit (boleh ke samping) ke titik terdekat yang cukup lega
+      const room = this.roomToTurn(p.x, p.z, cur, target, feet);
+      if (room) {
+        const dx = room.x - p.x, dz = room.z - p.z, d = Math.hypot(dx, dz), m = Math.min(d, step * 0.6);
+        const nx = p.x + (dx / d) * m, nz = p.z + (dz / d) * m;
+        if (!this.blockedAt(nx, nz, feet)) { p.x = nx; p.z = nz; return; }
+      }
+      // tidak ada: mundur dulu (kalau belakang mentok, maju) sampai cukup ruang
+      const s = this.shuffle || -1;
+      for (const k of [s, -s]) {
+        const bx = p.x + Math.sin(cur) * step * 0.5 * k, bz = p.z + Math.cos(cur) * step * 0.5 * k;
+        if (!this.blockedAt(bx, bz, feet)) { p.x = bx; p.z = bz; this.shuffle = k; break; }
+      }
       return;
     }
     // maju sesuai arah hadap; makin belum lurus ke tujuan, makin pelan
@@ -317,6 +345,18 @@ export class Player {
     if (stuck || !this.blockedAt(p.x + mx, p.z + mz, feet)) { p.x += mx; p.z += mz; }
     else if (!this.blockedAt(p.x + mx, p.z, feet)) p.x += mx; // meluncur di sepanjang dinding
     else if (!this.blockedAt(p.x, p.z + mz, feet)) p.z += mz;
+  }
+
+  // Titik terdekat (≤1,25 unit) tempat kuda dengan arah sekarang muat & bisa berputar ke `target`
+  roomToTurn(x, z, cur, target, feet) {
+    for (let r = 0.25; r <= 1.26; r += 0.25) {
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2, qx = x + Math.sin(a) * r, qz = z + Math.cos(a) * r;
+        if (this.blockedAt(qx, qz, feet)) continue;
+        if (horseTurnDir(this.grid, qx, qz, cur, target)) return { x: qx, z: qz };
+      }
+    }
+    return null;
   }
 
   mount(v) {
