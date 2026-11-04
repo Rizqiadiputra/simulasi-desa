@@ -1,0 +1,13 @@
+import { defineConfig, loadEnv } from 'vite';
+import { chatApiPlugin } from './server/chatApi.js';
+
+export default defineConfig(({ mode }) => {
+  // Muat .env (termasuk ANTHROPIC_API_KEY) ke process.env untuk endpoint chat
+  const env = loadEnv(mode, process.cwd(), '');
+  for (const k of ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN']) if (env[k] && !process.env[k]) process.env[k] = env[k];
+  return {
+    server: { host: true, port: 5173 },
+    build: { target: 'es2020', chunkSizeWarningLimit: 1200 },
+    plugins: [chatApiPlugin()],
+  };
+});
