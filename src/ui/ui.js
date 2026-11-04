@@ -9,6 +9,7 @@ import { saveState, resetState, exportState } from '../data/store.js';
 import * as P from './panels.js';
 import { SUGGESTIONS as SUGG } from '../chat/brain.js';
 import { Minimap } from './minimap.js';
+import { NEEDS } from '../player/needs.js';
 
 const TABS = [['peta', '🗺️', 'Peta'], ['pengumuman', '📜', 'Pengumuman'], ['riwayat', '🏗️', 'Riwayat'], ['warga', '👥', 'Warga']];
 const SPEEDS = [1, 5, 20, 0];
@@ -59,6 +60,8 @@ export class UI {
       <button class="fab" data-buildmenu="1">🔨 <span>Bangun</span></button>
       <button class="fab fab-walk" data-walk="1">🚶 <span>Jalan-jalan</span></button>
       <div class="walkhud" hidden>
+        <div class="needs">${NEEDS.map(([k, i, l]) => `<div class="need" data-need="${k}" title="${l}"><span>${i}</span><i><b></b></i></div>`).join('')}<div class="need-kp" title="Kepeng milikmu"><i class="kepeng"></i> <b data-h="mykp">0</b></div></div>
+        <div class="sleep-veil" hidden>😴 zzz…</div>
         <div class="joy"><div class="joy-knob"></div></div>
         <button class="act-btn" data-act="1" hidden></button>
         <button class="cam-btn" data-cam="1">🎥 Atas</button>
@@ -345,8 +348,20 @@ export class UI {
     const banner = this.h.event;
     if (ev.length) { banner.hidden = false; banner.textContent = ev.map((e) => `${e.icon} ${e.label}`).join(' · '); } else banner.hidden = true;
     if (this.app.player?.active) {
+      const pl = this.app.player, n = pl.needs.n;
+      if (n) {
+        for (const [k, , l] of NEEDS) {
+          const el = this.h['need_' + k] ||= this.$(`[data-need="${k}"]`);
+          const v = Math.round(n[k]);
+          el.querySelector('b').style.width = v + '%';
+          el.classList.toggle('low', v < 25);
+          el.title = `${l} ${v}/100`;
+        }
+        this.h.mykp.textContent = Math.floor(pl.data.kepeng || 0);
+      }
+      this.$('.sleep-veil').hidden = !pl.needs.sleeping;
       const nb = this.app.player.nearby, btn = this.$('.act-btn');
-      btn.hidden = !nb;
+      btn.hidden = !nb || pl.needs.sleeping;
       if (nb && btn.textContent !== nb.label) btn.textContent = nb.label;
     }
     // teks kegiatan live

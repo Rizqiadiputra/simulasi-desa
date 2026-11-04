@@ -240,3 +240,18 @@ h4 { margin: 16px 0 8px; font-family: 'Marcellus', serif; font-size: 16px; color
 /* toast pindah ke kiri supaya tidak menutupi peta kecil */
 .toasts { right: auto; left: 10px; align-items: flex-start; top: calc(env(safe-area-inset-top) + 70px); max-width: min(62vw, 340px); }
 @media (min-width: 820px) { .minimap { top: 60px; width: 168px; } .minimap canvas { width: 168px; height: 168px; } }
+
+/* ---------------- kebutuhan pemain ---------------- */
+.needs { position: absolute; left: 14px; bottom: 156px; display: flex; flex-direction: column; gap: 4px; background: #2a1a12bb; padding: 7px 9px; border-radius: 12px; box-shadow: 0 4px 12px #0004; pointer-events: none; }
+.need { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.need span { width: 16px; text-align: center; }
+.need i { display: block; width: 74px; height: 7px; border-radius: 4px; background: #fbf3e433; overflow: hidden; }
+.need b { display: block; height: 100%; width: 100%; border-radius: 4px; background: linear-gradient(90deg, #8cc26a, #c9e08a); transition: width .3s; }
+.need[data-need="kesehatan"] b { background: linear-gradient(90deg, #d0574b, #f08a6a); }
+.need[data-need="stamina"] b { background: linear-gradient(90deg, #e0b34d, #ffe08a); }
+.need.low b { background: #e0533f; animation: needblink 1s infinite; }
+@keyframes needblink { 50% { opacity: .45; } }
+.need-kp { color: #ffe2a6; font-size: 12px; font-weight: 800; margin-top: 2px; }
+.sleep-veil { position: fixed; inset: 0; background: radial-gradient(circle, #0a0f2acc, #02030aee); color: #e8e4ff; font: 700 28px 'Marcellus', serif; display: flex; align-items: center; justify-content: center; pointer-events: none; animation: tin .8s ease-out; }
+.sleep-veil[hidden] { display: none; }
+@media (hover: hover) and (pointer: fine) { .needs { bottom: 18px; } }

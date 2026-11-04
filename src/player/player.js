@@ -6,6 +6,7 @@ import { seeThrough } from '../scene/seeThrough.js';
 import { T } from '../simulation/grid.js';
 import { animateHorse } from '../vehicles/models.js';
 import { horseBodyOk, horseTurn, horseTurnDir } from '../vehicles/rules.js';
+import { PlayerNeeds } from './needs.js';
 
 const angLerp = (a, b, t) => { let d = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI; if (d < -Math.PI) d += Math.PI * 2; return a + d * t; };
 
@@ -38,6 +39,16 @@ export class Player {
     this.marker = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.4, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: 0xffd25a }));
     this.marker.visible = false;
     app.stage.scene.add(this.marker);
+    this.needs = new PlayerNeeds(this);
+    // alat kerja di tangan (cangkul / tongkat pengusir burung), tampil saat bekerja
+    this.tool = new THREE.Group();
+    const wood = new THREE.MeshLambertMaterial({ color: 0x7a5232 }), iron = new THREE.MeshLambertMaterial({ color: 0x5c5c5c });
+    this.toolPivot = new THREE.Group(); this.toolPivot.position.set(0.22, 1.05, 0.1);
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.1, 6), wood); handle.position.y = 0.55;
+    this.toolBlade = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.03, 0.2), iron); this.toolBlade.position.set(0, 1.08, 0.1);
+    this.toolPivot.add(handle, this.toolBlade); this.tool.add(this.toolPivot);
+    this.tool.visible = false; app.stage.scene.add(this.tool);
+    this.tilt = new THREE.Quaternion(); this.axisX = new THREE.Vector3(1, 0, 0);
     if (this.state.player) this.spawnModel();
     this.bindKeys();
   }
@@ -173,7 +184,9 @@ export class Player {
 
   jump() {
     const p = this.data;
-    if (!this.active || !p || !this.grounded || this.vehicle?.type === 'kereta') return;
+    if (!this.active || !p || !this.grounded || this.vehicle?.type === 'kereta' || this.needs.busy) return;
+    const n = this.needs.n;
+    if (!this.vehicle) { if (n.stamina < 8) return this.app.ui?.toast('😮‍💨 Terlalu capek untuk loncat', 'bad'); n.stamina -= 8; }
     p.vy = JUMP;
     this.grounded = false;
   }
@@ -225,7 +238,7 @@ export class Player {
       p.x = s.x; p.z = s.z; p.y = s.y; p.vy = 0; p.yaw = K.yaw;
       if (this.camMode !== 'pov' || !this.povTurned) this.viewYaw = angLerp(this.viewYaw, K.yaw, Math.min(1, dt * 2));
       this.moving = false;
-    } else if (this.active) {
+    } else if (this.active && !this.needs.busy) {
       // WASD / panah: 2 tombol sekaligus = jalan menyerong (diagonal)
       ix = (this.keys.has('r') ? 1 : 0) - (this.keys.has('l') ? 1 : 0) + this.joy.x;
       iy = (this.keys.has('u') ? 1 : 0) - (this.keys.has('d') ? 1 : 0) + this.joy.y;
@@ -242,8 +255,9 @@ export class Player {
       let dx = (rx * ix + fwd.x * iy) * k, dz = (rz * ix + fwd.z * iy) * k;
       const riding = V?.type === 'kuda';
       // lari: tahan Shift, atau dorong joystick sampai mentok
-      const run = this.keys.has('run') || Math.hypot(this.joy.x, this.joy.y) > 0.95;
-      const speed = (run ? (riding ? 12 : 6.5) : riding ? 7 : 4) * dt;
+      const run = (this.keys.has('run') || Math.hypot(this.joy.x, this.joy.y) > 0.95) && (riding ? !this.needs.sleeping : this.needs.canRun);
+      this.running = run;
+      const speed = (run ? (riding ? 12 : 6.5) : riding ? 7 : 4) * (riding ? 1 : this.needs.speedMul) * dt;
       dx *= speed; dz *= speed;
       const feet = p.y || 0;
       if (riding) this.rideStep(dx, dz, dt, feet);
@@ -256,12 +270,14 @@ export class Player {
       }
       this.phase += dt * (this.grounded ? 11 : 3);
     }
+    if (!this.moving) this.running = false;
+    if (this.active) this.needs.update(dt, { moving: this.moving, running: this.running, riding: V?.type === 'kuda' });
     if (this.active && V?.type !== 'kereta') this.physics(dt);
     if (V?.type === 'kuda') {
       // kuda mengikuti pemain
       const h = V.h;
       h.x = p.x; h.z = p.z; h.yaw = p.yaw || 0;
-      h.phase += dt * (this.moving ? (this.keys.has('run') || Math.hypot(this.joy.x, this.joy.y) > 0.95 ? 13 : 8) : 0);
+      h.phase += dt * (this.moving ? (this.running ? 13 : 8) : 0);
       h.g.position.set(p.x, p.y, p.z); h.g.rotation.y = h.yaw;
       animateHorse(h.g, h.phase, this.moving && this.grounded ? 1 : 0, 0);
     }
@@ -269,6 +285,18 @@ export class Player {
     const seatY = V?.type === 'kuda' ? 0.95 : 0; // duduk di pelana
     const bob = this.moving ? Math.abs(Math.sin(this.phase)) * (V ? 0.05 : 0.08) : 0;
     this.q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, p.yaw || 0);
+    // animasi bekerja di sawah: membungkuk (tanam / siangi / panen), mengayun cangkul, atau melambai tongkat
+    const work = this.needs.task;
+    this.tool.visible = !!work && work.offer.task.motion !== 'bend';
+    if (work) {
+      const m = work.offer.task.motion, s = Math.sin(work.t * (m === 'wave' ? 7 : 5));
+      const lean = m === 'bend' ? 0.75 + 0.12 * s : m === 'swing' ? 0.12 + 0.22 * Math.max(0, -s) : 0.05;
+      this.q.multiply(this.tilt.setFromAxisAngle(this.axisX, lean));
+      this.tool.position.set(p.x, p.y || 0, p.z); this.tool.rotation.set(0, p.yaw || 0, 0);
+      this.toolBlade.visible = m === 'swing';
+      if (m === 'swing') this.toolPivot.rotation.set(-0.3 + 1.6 * (0.5 - 0.5 * s), 0, 0); // angkat lalu hantam ke tanah
+      else this.toolPivot.rotation.set(-0.4, 0, 0.6 * s); // tongkat dilambai kiri-kanan
+    }
     this.m.compose(this.tmp.set(p.x, p.y + seatY + bob, p.z), this.q, new THREE.Vector3(1.05, V?.type === 'kuda' ? 0.8 : 1.05, 1.05));
     const pov = this.active && this.camMode === 'pov';
     this.app.npcs.model.set(this.idx, this.m, !pov);
@@ -423,19 +451,25 @@ export class Player {
     for (const h of vm?.horses || []) {
       if (Math.hypot(h.x - p.x, h.z - p.z) < 2.2) { this.nearby = { kind: 'kuda', h, label: `🐎 Naik kuda ${h.name}` }; return; }
     }
+    // bangunan di dekat kaki (pasar, petirtaan, pendopo, sawah -> aksi kebutuhan)
+    const { i, j } = worldToCell(p.x, p.z);
+    let near = null;
+    for (const [a, b] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const id = this.grid.ownerAt(i + a, j + b);
+      if (id) { near = this.app.sim.building(id); break; }
+    }
+    const w = this.needs.task;
+    if (w) { this.nearby = { kind: 'busy', label: `${w.offer.task.icon} Sedang ${w.offer.task.verb}... ${Math.ceil(w.dur - w.t)} detik` }; return; }
+    const need = this.needs.actionAt(near);
+    if (need?.b) { this.nearby = need; return; }
     let best = null, bd = 2.6;
     for (const n of this.app.npcs.list) {
       if (n.mode === 'hidden') continue;
       const d = Math.hypot(n.x - p.x, n.z - p.z);
       if (d < bd) { bd = d; best = { kind: 'citizen', npc: n, label: `💬 Ngobrol dengan ${n.c.name}` }; }
     }
-    if (!best) {
-      const { i, j } = worldToCell(p.x, p.z);
-      for (const [a, b] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const id = this.grid.ownerAt(i + a, j + b);
-        if (id) { const bb = this.app.sim.building(id); best = { kind: 'building', b: bb, label: `🔍 Lihat ${bb.name}` }; break; }
-      }
-    }
+    if (!best && need) best = need; // minum di kanal
+    if (!best && near) best = { kind: 'building', b: near, label: `🔍 Lihat ${near.name}` };
     this.nearby = best;
   }
 
@@ -443,6 +477,8 @@ export class Player {
     const nb = this.nearby;
     if (!nb) return;
     const ui = this.app.ui;
+    if (this.needs.busy || nb.kind === 'busy') return;
+    if (nb.kind === 'need') return this.needs.act(nb);
     if (nb.kind === 'turun') return this.dismount();
     if (nb.kind === 'kuda') return this.mount({ type: 'kuda', h: nb.h });
     if (nb.kind === 'kereta') return this.mount({ type: 'kereta' });
