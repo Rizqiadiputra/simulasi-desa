@@ -7,7 +7,7 @@ import { TorchSystem } from './scene/torches.js';
 import { BuildingManager } from './buildings/manager.js';
 import { NPCManager } from './npc/manager.js';
 import { Simulation } from './simulation/sim.js';
-import { loadState, saveState } from './data/store.js';
+import { loadState, saveState, clearSaves } from './data/store.js';
 import { createInitialState } from './data/initialState.js';
 import { UI } from './ui/ui.js';
 import { Player } from './player/player.js';
@@ -16,7 +16,7 @@ import { VehicleManager } from './vehicles/manager.js';
 import { cellToWorld } from './data/config.js';
 import * as THREE from 'three';
 
-let state = loadState();
+let state = await loadState();
 const fresh = !state;
 if (!state) state = createInitialState();
 
@@ -66,7 +66,7 @@ ring.renderOrder = 10; ring.visible = false; scene.add(ring);
 let selectedNpc = null;
 app.selectNpc = (id) => { selectedNpc = id ? npcs.npcs.get(id) : null; };
 app.focusBuilding = (b) => { const w = cellToWorld(b.ci, b.cj); stage.flyTo(w.x, w.z, 48); };
-app.reset = () => { localStorage.clear(); app.resetting = true; location.reload(); };
+app.reset = async () => { app.resetting = true; await clearSaves(); location.reload(); };
 // API sederhana untuk integrasi backend / media sosial (mis. komentar -> warga baru)
 app.api = {
   addCitizen: (data = {}) => sim.addCitizen({ ...data, by: 'api' }),

@@ -1,0 +1,27 @@
+// Konfigurasi Cloudflare Worker "desa-api".
+// Lokal : npm run dev   -> http://localhost:8787, konek ke Postgres lokal (localConnectionString)
+// Online: npm run deploy -> https://desa-api.<akun>.workers.dev, konek ke Supabase lewat Hyperdrive
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "desa-api",
+	"main": "src/index.js",
+	"compatibility_date": "2026-10-01",
+	// driver `postgres` butuh modul Node (net, crypto, dll.)
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"hyperdrive": [
+		{
+			// dipakai di kode sebagai env.HYPERDRIVE
+			"binding": "HYPERDRIVE",
+			// Hyperdrive "desa-db" -> Supabase project game-simulator
+			"id": "9452597ccdc04ecea7a29f73efdcbe9a",
+			// hanya dipakai saat `wrangler dev`. Hyperdrive wajib ada password; Postgres lokal (trust) mengabaikannya
+			"localConnectionString": "postgres://putra:local@localhost:5432/desa_majapahit"
+		}
+	],
+	// asal (origin) yang boleh memanggil API ini dari browser
+	"vars": {
+		"ALLOWED_ORIGINS": "https://radiputra.biz.id,http://localhost:5173"
+	}
+}

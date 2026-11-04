@@ -8,8 +8,13 @@ export default defineConfig(({ mode }) => {
   return {
     // GitHub Pages project site: https://radiputra.biz.id/simulasi-desa/
     base: mode === 'production' ? '/simulasi-desa/' : '/',
-    server: { host: true, port: 5173 },
-    build: { target: 'es2020', chunkSizeWarningLimit: 1200 },
+    server: {
+      host: true,
+      port: 5173,
+      // simpanan desa dilayani Cloudflare Worker lokal (cd worker && npm run dev)
+      proxy: { '/api/save': 'http://localhost:8787' },
+    },
+    build: { target: 'es2022', chunkSizeWarningLimit: 1200 },
     plugins: [chatApiPlugin()],
   };
 });
