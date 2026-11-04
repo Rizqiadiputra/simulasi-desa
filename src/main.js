@@ -7,7 +7,7 @@ import { TorchSystem } from './scene/torches.js';
 import { BuildingManager } from './buildings/manager.js';
 import { NPCManager } from './npc/manager.js';
 import { Simulation } from './simulation/sim.js';
-import { loadState, saveState, clearSaves } from './data/store.js';
+import { loadState, saveState, clearSaves, replaceState, loadSlot } from './data/store.js';
 import { createInitialState } from './data/initialState.js';
 import { UI } from './ui/ui.js';
 import { Player } from './player/player.js';
@@ -67,6 +67,15 @@ let selectedNpc = null;
 app.selectNpc = (id) => { selectedNpc = id ? npcs.npcs.get(id) : null; };
 app.focusBuilding = (b) => { const w = cellToWorld(b.ci, b.cj); stage.flyTo(w.x, w.z, 48); };
 app.reset = async () => { app.resetting = true; await clearSaves(); location.reload(); };
+// Muat slot simpanan manual: jadikan simpanan otomatis terbaru, lalu muat ulang halaman
+app.loadSlot = async (n) => {
+  const s = await loadSlot(n);
+  if (!s) return false;
+  app.resetting = true; // jangan sampai state lama tersimpan lagi saat halaman ditutup
+  await replaceState(s);
+  location.reload();
+  return true;
+};
 // API sederhana untuk integrasi backend / media sosial (mis. komentar -> warga baru)
 app.api = {
   addCitizen: (data = {}) => sim.addCitizen({ ...data, by: 'api' }),
@@ -120,7 +129,7 @@ function frame(now) {
   renderer.render(scene, camera);
   adaptQuality(dt);
   saveT += dt;
-  if (saveT > 10) { saveT = 0; saveState(state); }
+  if (saveT > 10) { saveT = 0; if (!app.resetting) saveState(state); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

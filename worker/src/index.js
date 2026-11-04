@@ -1,5 +1,6 @@
 // Cloudflare Worker "desa-api": pintu masuk semua API game.
-//   /api/save         -> simpanan desa (save.js)
+//   /api/save         -> simpanan otomatis desa (save.js)
+//   /api/slots[/N]    -> simpanan manual, 5 slot per pemain (slots.js)
 //   /api/chat         -> ngobrol dengan warga lewat Claude (chat.js)
 //   /api/chat/status  -> { llm: true|false } supaya game tahu Claude tersedia atau tidak
 //
@@ -7,6 +8,7 @@
 // `env` berisi binding dari wrangler.jsonc (HYPERDRIVE, CHAT_LIMITER, vars) dan secret (ANTHROPIC_API_KEY).
 import { corsHeaders, jsonResponse, connect } from './http.js';
 import { handleSave } from './save.js';
+import { handleSlots } from './slots.js';
 import { handleChat, chatEnabled } from './chat.js';
 
 export default {
@@ -19,13 +21,14 @@ export default {
 
     const { pathname } = new URL(request.url);
     if (pathname === '/api/chat/status') return json(200, { llm: chatEnabled(env) });
-    if (pathname !== '/api/save' && pathname !== '/api/chat') return json(404, { error: 'not_found' });
+    const slotMatch = pathname.match(/^\/api\/slots(?:\/([^/]+))?$/);
+    if (pathname !== '/api/save' && pathname !== '/api/chat' && !slotMatch) return json(404, { error: 'not_found' });
 
     const sql = connect(env);
     try {
-      return pathname === '/api/save'
-        ? await handleSave(request, sql, json)
-        : await handleChat(request, env, sql, json);
+      if (pathname === '/api/save') return await handleSave(request, sql, json);
+      if (slotMatch) return await handleSlots(request, sql, json, slotMatch[1]);
+      return await handleChat(request, env, sql, json);
     } catch (e) {
       console.error('[desa-api]', e.message);
       return json(503, { error: 'db_unavailable' });

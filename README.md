@@ -26,7 +26,7 @@ npm run build
   - Prasasti Warga, panel info bangunan, chat dengan warga, mode Bangun, dan Undang Warga.
 - **Waktu**: mengikuti jam asli perangkat (1 hari desa = 1 hari nyata, jam 20.00 di HP = 20.00 di desa). Waktu tetap berjalan saat aplikasi ditutup (maksimal 30 hari dikejar). Mode cepat bisa dinyalakan lagi lewat `TIME_MODE = 'fast'` di `src/data/config.js`.
 - **Karakter pemain & ngobrol**:
-  - Buat profil, lalu jalan-jalan dengan WASD atau joystick. Space untuk loncat, C untuk ganti kamera (Atas / Belakang / Mata).
+  - Buat profil, lalu jalan-jalan dengan W/S atau ↑↓ (atau joystick). A/D atau ← → memutar kamera, Space untuk loncat, C untuk ganti kamera (Atas / Belakang / Mata).
   - Dekati warga lalu tekan E (atau tombol 💬 di Prasasti) untuk ngobrol bebas lewat chat.
 - **Kuda & kereta kencana**:
   - Istal Kuda berisi 3 kuda yang merumput dan berkeliaran. Desa lama otomatis dibangunkan satu istal oleh Pak Akuwu, dan istal juga bisa dibangun lewat menu Bangun.

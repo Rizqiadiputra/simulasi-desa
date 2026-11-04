@@ -17,7 +17,7 @@ Dicatat 2026-11-04. Belum dikerjakan.
 - Riset tata kota Majapahit dari naskah kuno (mis. Nagarakretagama/Desawarnana) dan temuan arkeologi Trowulan.
 - Terapkan hasilnya ke tata letak desa: jalan, alun-alun, bangunan, pembagian wilayah.
 
-## 5. Simpan & muat game (save / load)
+## 5. ✅ Simpan & muat game (save / load) — selesai 2026-11-05
 - Ada riwayat simpanan (beberapa slot save).
 - Pemain bebas memilih kapan menyimpan.
 - Di menu Setting ada pilihan: **Simpan Game**, **Muat Game**, **Mulai dari Awal**.
@@ -44,7 +44,7 @@ Prioritas yang disarankan: **6 (misi)**, **12 (kontrol HP)**, **7 (hubungan warg
 14. **Pengaturan grafis**: rendah / sedang / tinggi supaya lancar di perangkat yang kurang kuat.
 
 ### Teknis
-15. **Obrolan Claude online lewat Cloudflare Worker**: API key disimpan di Worker, beri batas pemakaian supaya biaya aman.
+15. ✅ **Obrolan Claude online lewat Cloudflare Worker** (selesai 2026-11-05; aktif setelah `wrangler secret put ANTHROPIC_API_KEY`): API key disimpan di Worker, beri batas pemakaian supaya biaya aman.
 16. **Statistik pengunjung**: Cloudflare Web Analytics (gratis, tanpa cookie).
 
 ### Eksperimen (menunggu langganan API)

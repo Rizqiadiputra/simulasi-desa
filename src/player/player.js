@@ -1,4 +1,4 @@
-// Karakter pemain: digerakkan WASD/panah (laptop) atau joystick (HP), kamera mengikuti.
+// Karakter pemain: W/S atau ↑↓ untuk jalan, A/D atau ← → untuk memutar kamera (laptop), atau joystick (HP).
 import * as THREE from 'three';
 import { cellToWorld, worldToCell } from '../data/config.js';
 import { passableCells } from '../simulation/grid.js';
@@ -77,7 +77,8 @@ export class Player {
   }
 
   bindKeys() {
-    const map = { KeyW: 'u', ArrowUp: 'u', KeyS: 'd', ArrowDown: 'd', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r', ShiftLeft: 'run', ShiftRight: 'run' };
+    // A / D dan ← → memutar kamera (seperti Roblox)
+    const map = { KeyW: 'u', ArrowUp: 'u', KeyS: 'd', ArrowDown: 'd', KeyA: 'camL', ArrowLeft: 'camL', KeyD: 'camR', ArrowRight: 'camR', ShiftLeft: 'run', ShiftRight: 'run' };
     addEventListener('keydown', (e) => {
       if (!this.active || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
       if (e.code === 'KeyE') { e.preventDefault(); this.interact(); return; }
@@ -160,6 +161,22 @@ export class Player {
     this.viewPitch = Math.max(lo, Math.min(hi, this.viewPitch + (this.camMode === 'pov' ? -dy : dy) * 0.005));
   }
 
+  // Tahan ← / → : kamera berputar mengelilingi pemain
+  turnCamera(dt) {
+    const dir = (this.keys.has('camL') ? 1 : 0) - (this.keys.has('camR') ? 1 : 0);
+    if (!dir) return;
+    const a = dir * 2.2 * dt; // ~2,2 radian per detik
+    if (this.camMode === 'orbit') {
+      const { camera, controls } = this.app.stage;
+      this.tmp.copy(camera.position).sub(controls.target).applyAxisAngle(THREE.Object3D.DEFAULT_UP, a);
+      camera.position.copy(controls.target).add(this.tmp);
+      camera.lookAt(controls.target);
+    } else {
+      this.povTurned = true;
+      this.viewYaw += a;
+    }
+  }
+
   updateCamera(dt) {
     const p = this.data, { camera, controls } = this.app.stage;
     const fx = Math.sin(this.viewYaw), fz = Math.cos(this.viewYaw);
@@ -231,6 +248,7 @@ export class Player {
     if (!p || this.idx === null) return;
     const V = this.vehicle;
     let ix = 0, iy = 0;
+    if (this.active) this.turnCamera(dt);
     if (V?.type === 'kereta') {
       // penumpang: ikut kereta
       const K = this.app.vehicles.kereta;
@@ -239,7 +257,7 @@ export class Player {
       if (this.camMode !== 'pov' || !this.povTurned) this.viewYaw = angLerp(this.viewYaw, K.yaw, Math.min(1, dt * 2));
       this.moving = false;
     } else if (this.active && !this.needs.busy) {
-      // WASD / panah: 2 tombol sekaligus = jalan menyerong (diagonal)
+      // W/S atau ↑↓ maju-mundur (joystick HP tetap bisa serong)
       ix = (this.keys.has('r') ? 1 : 0) - (this.keys.has('l') ? 1 : 0) + this.joy.x;
       iy = (this.keys.has('u') ? 1 : 0) - (this.keys.has('d') ? 1 : 0) + this.joy.y;
     }

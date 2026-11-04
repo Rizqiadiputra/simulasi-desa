@@ -255,3 +255,14 @@ h4 { margin: 16px 0 8px; font-family: 'Marcellus', serif; font-size: 16px; color
 .sleep-veil { position: fixed; inset: 0; background: radial-gradient(circle, #0a0f2acc, #02030aee); color: #e8e4ff; font: 700 28px 'Marcellus', serif; display: flex; align-items: center; justify-content: center; pointer-events: none; animation: tin .8s ease-out; }
 .sleep-veil[hidden] { display: none; }
 @media (hover: hover) and (pointer: fine) { .needs { bottom: 18px; } }
+
+/* slot simpanan */
+.slots { list-style: none; margin: 10px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.slot { display: flex; align-items: center; gap: 10px; border: 1px solid #e4d3b6; background: #fffaf1; border-radius: 12px; padding: 10px; }
+.slot-n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #efe2cb; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.slot-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.slot-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-info small { font-size: 12px; }
+.slot-btns { flex: none; display: flex; flex-direction: column; gap: 6px; }
+.slot-name { display: flex; flex-direction: column; gap: 4px; font-weight: 700; font-size: 13px; }
+.slot-name input { border: 1px solid #d8c4a4; border-radius: 10px; padding: 9px 11px; font-size: 14px; font: inherit; font-weight: 400; }

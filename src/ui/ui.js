@@ -5,7 +5,7 @@ import { BUILDING_TYPES, PROFESSIONS, buildableTypes } from '../data/buildingTyp
 import { worldToCell, GRID } from '../data/config.js';
 import { dayInfo } from '../simulation/clock.js';
 import { WEATHER_ICON, WEATHER_LABEL } from '../simulation/weather.js';
-import { saveState, resetState, exportState } from '../data/store.js';
+import { saveState, resetState, exportState, listSlots, saveSlot, deleteSlot, MAX_SLOTS } from '../data/store.js';
 import * as P from './panels.js';
 import { SUGGESTIONS as SUGG } from '../chat/brain.js';
 import { Minimap } from './minimap.js';
@@ -66,7 +66,7 @@ export class UI {
         <button class="act-btn" data-act="1" hidden></button>
         <button class="cam-btn" data-cam="1">🎥 Atas</button>
         <button class="jump-btn" data-jump="1" aria-label="Loncat">⤒<small>Loncat</small></button>
-        <div class="walk-keys">WASD/panah: jalan (2 tombol = serong) · Shift: lari · Space: loncat · E: sapa · C: kamera · seret: menoleh</div>
+        <div class="walk-keys">W/S ↑↓: jalan · A/D ← →: putar kamera · Shift: lari · Space: loncat · E: sapa · C: kamera · seret: menoleh</div>
       </div>
       <div class="buildbar" hidden>
         <div class="bb-title"></div>
@@ -122,6 +122,10 @@ export class UI {
     if (d.cancel) return this.cancelBuild();
     if (d.reset) { if (t.dataset.armed) { this.app.reset(); } else { t.dataset.armed = '1'; t.textContent = 'Yakin? Ketuk sekali lagi'; } return; }
     if (d.export) return this.exportJSON();
+    if (d.slots) return this.openSlots(d.slots);
+    if (d.slotsave) return this.armed(t, '⚠️ Timpa simpanan ini? Ketuk lagi', () => this.doSaveSlot(+d.slotsave));
+    if (d.slotload) return this.armed(t, '⚠️ Progres sekarang diganti. Ketuk lagi', () => this.doLoadSlot(+d.slotload));
+    if (d.slotdel) return this.armed(t, 'Yakin hapus?', () => this.doDeleteSlot(+d.slotdel));
     if (d.walk) return this.toggleWalk();
     if (d.act) return this.app.player.interact();
     if (d.jump) return this.app.player.jump();
@@ -224,9 +228,18 @@ export class UI {
            <p class="muted">Mode 🚶 Jalan-jalan → dekati kereta → tekan <b>E</b> untuk naik sebagai penumpang.</p>`;
     } else if (v.kind === 'settings') {
       title = '⚙ Pengaturan';
-      html = `<p>Desa tersimpan otomatis di perangkat ini. Waktu desa mengikuti jam asli perangkatmu (1 hari desa = 1 hari nyata) dan terus berjalan walau aplikasi ditutup.</p>
-        <div class="btns col"><button class="btn" data-profile="1">🧭 ${this.app.state.player ? 'Ubah profil karakterku' : 'Buat karakterku'}</button><button class="btn" data-export="1">⬇️ Ekspor data desa (JSON)</button><button class="btn danger" data-reset="1">🗑️ Mulai desa baru</button></div>
-        <p class="muted small">State desa berupa satu JSON yang siap disambungkan ke backend — mis. warga baru dari komentar/follower media sosial lewat <code>desa.api.addCitizen()</code>.</p>`;
+      html = `<p>Desa tersimpan otomatis tiap beberapa detik. Waktu desa mengikuti jam asli perangkatmu (1 hari desa = 1 hari nyata) dan terus berjalan walau aplikasi ditutup.</p>
+        <div class="btns col">
+          <button class="btn primary" data-slots="save">💾 Simpan Game</button>
+          <button class="btn" data-slots="load">📂 Muat Game</button>
+          <button class="btn" data-profile="1">🧭 ${this.app.state.player ? 'Ubah profil karakterku' : 'Buat karakterku'}</button>
+          <button class="btn" data-export="1">⬇️ Ekspor data desa (JSON)</button>
+          <button class="btn danger" data-reset="1">🗑️ Mulai dari Awal</button>
+        </div>
+        <p class="muted small">Mulai dari Awal menghapus desa yang sedang berjalan. Slot di Simpan Game tetap aman dan bisa dimuat lagi.</p>`;
+    } else if (v.kind === 'slots') {
+      title = v.mode === 'save' ? '💾 Simpan Game' : '📂 Muat Game';
+      html = this.slotsView(v);
     }
     this.$('.sheet-title').textContent = title;
     this.$('.sheet-back').hidden = !this.stack?.length;
@@ -520,7 +533,7 @@ export class UI {
     this.$('.walkhud').hidden = false;
     this.$('.fab-walk').innerHTML = '✋ <span>Berhenti</span>';
     this.updateCamBtn();
-    this.toast(matchMedia('(pointer: fine)').matches ? '🚶 WASD / panah untuk jalan, Space untuk loncat, E untuk menyapa' : '🚶 Joystick kiri untuk jalan, tombol ⤒ untuk loncat', 'good');
+    this.toast(matchMedia('(pointer: fine)').matches ? '🚶 W/S atau ↑↓ untuk jalan, A/D atau ← → putar kamera, Space untuk loncat, E untuk menyapa' : '🚶 Joystick kiri untuk jalan, tombol ⤒ untuk loncat', 'good');
   }
 
   updateCamBtn() {
@@ -560,6 +573,78 @@ export class UI {
     base.addEventListener('pointermove', (e) => { if (e.pointerId === id) move(e); });
     base.addEventListener('pointerup', end);
     base.addEventListener('pointercancel', end);
+  }
+
+  // ------------------------------------------------------------------ slot simpanan
+  // Tombol dua ketukan: ketukan pertama minta konfirmasi, ketukan kedua menjalankan
+  armed(t, label, fn) {
+    if (!t.dataset.armed) { t.dataset.armed = '1'; t.textContent = label; return; }
+    fn();
+  }
+
+  async openSlots(mode) {
+    const v = { kind: 'slots', mode, list: null, busy: false };
+    this.open(v, true);
+    try { v.list = await listSlots(); } catch { v.list = { slots: [], where: 'lokal' }; }
+    if (this.view === v) this.refreshView();
+  }
+
+  slotsView(v) {
+    if (!v.list) return '<p class="muted">Memuat daftar simpanan…</p>';
+    const by = Object.fromEntries(v.list.slots.map((x) => [x.slot, x]));
+    const save = v.mode === 'save';
+    const rows = [];
+    for (let n = 1; n <= MAX_SLOTS; n++) {
+      const x = by[n], m = x?.summary || {};
+      const info = x
+        ? `<b>${esc(x.name)}</b><small>Hari ke-${m.day ?? '?'} · ${m.minute != null ? fmtClock(m.minute) : '--:--'} · ${m.pop ?? '?'} warga · ${fmt(m.kas ?? 0)} kepeng${m.player ? ` · ${esc(m.player)}` : ''}</small><small class="muted">Disimpan ${new Date(x.savedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</small>`
+        : '<b class="muted">Slot kosong</b>';
+      const btns = save
+        ? `<button class="btn sm primary" ${x ? `data-slotsave="${n}"` : `data-slotsave="${n}" data-armed="1"`} ${v.busy ? 'disabled' : ''}>${x ? 'Timpa' : 'Simpan di sini'}</button>`
+        : x
+          ? `<button class="btn sm primary" data-slotload="${n}" ${v.busy ? 'disabled' : ''}>Muat</button><button class="btn sm danger" data-slotdel="${n}" ${v.busy ? 'disabled' : ''}>Hapus</button>`
+          : '';
+      rows.push(`<li class="slot"><span class="slot-n">${n}</span><div class="slot-info">${info}</div><div class="slot-btns">${btns}</div></li>`);
+    }
+    const day = this.sim.day;
+    return `${save ? `<label class="slot-name">Nama simpanan<input data-slotname maxlength="40" value="${esc(v.name ?? `Hari ke-${day}`)}"></label>` : '<p class="muted small">Memuat slot mengganti desa yang sedang berjalan. Simpan dulu kalau progres sekarang ingin disimpan.</p>'}
+      <ul class="slots">${rows.join('')}</ul>
+      <p class="muted small">${v.list.where === 'server' ? '☁️ Tersimpan di server, ikut ID pemainmu di browser ini.' : '📱 Server tidak terjangkau: slot disimpan di perangkat ini saja.'}</p>`;
+  }
+
+  async doSaveSlot(n) {
+    const v = this.view;
+    if (v?.kind !== 'slots' || v.busy) return;
+    v.name = (this.$('[data-slotname]')?.value || '').trim() || `Hari ke-${this.sim.day}`;
+    v.busy = true; this.refreshView();
+    try {
+      saveState(this.sim.state); // sekalian perbarui simpanan otomatis
+      const where = await saveSlot(n, v.name, JSON.parse(JSON.stringify(this.sim.state)));
+      this.toast(`💾 Tersimpan di slot ${n}${where === 'lokal' ? ' (perangkat ini)' : ''}`, 'good');
+      v.list = await listSlots();
+    } catch {
+      this.toast('Gagal menyimpan. Coba lagi.', 'bad');
+    }
+    v.busy = false;
+    if (this.view === v) this.refreshView();
+  }
+
+  async doLoadSlot(n) {
+    const v = this.view;
+    if (v?.kind !== 'slots' || v.busy) return;
+    v.busy = true; this.refreshView();
+    this.toast(`📂 Memuat slot ${n}…`);
+    const ok = await this.app.loadSlot(n).catch(() => false);
+    if (!ok) { this.toast('Simpanan tidak ditemukan.', 'bad'); v.busy = false; if (this.view === v) this.refreshView(); }
+  }
+
+  async doDeleteSlot(n) {
+    const v = this.view;
+    if (v?.kind !== 'slots' || v.busy) return;
+    v.busy = true; this.refreshView();
+    try { await deleteSlot(n); v.list = await listSlots(); this.toast(`🗑️ Slot ${n} dihapus`); } catch { this.toast('Gagal menghapus.', 'bad'); }
+    v.busy = false;
+    if (this.view === v) this.refreshView();
   }
 
   exportJSON() {
