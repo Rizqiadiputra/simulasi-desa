@@ -46,7 +46,7 @@ src/
   player/      karakter pemain, fisika & tabrakan
   chat/        persona warga, otak lokal, layanan chat
   vehicles/    kuda & kereta kencana (model + perilaku)
-server/        endpoint /api/chat (Claude) untuk dev server
+worker/        Cloudflare Worker: /api/save (Postgres/Supabase) + /api/chat (Claude)
 ```
 `simulation/` dan `data/` tidak bergantung pada three.js, jadi bisa dijalankan di server/Node.
 
@@ -56,15 +56,16 @@ Tanpa konfigurasi apa pun, warga menjawab memakai **otak lokal**: jawaban berbas
 Supaya obrolan bebas seperti manusia, isi API key Claude:
 
 ```bash
-cp .env.example .env   # lalu isi ANTHROPIC_API_KEY=...
-npm run dev
+cp worker/.dev.vars.example worker/.dev.vars   # lalu isi ANTHROPIC_API_KEY=...
+cd worker && npm run dev                       # Worker di :8787 (terminal 1)
+npm run dev                                    # game di :5173 (terminal 2)
 ```
 
-- Endpoint `POST /api/chat` (di `server/chatApi.js`, jalan di dev server Vite) memanggil model `claude-opus-5-5` dengan effort `low`, plus fallback server-side otomatis kalau permintaan ditolak.
-- Key hanya dibaca di server, tidak pernah dikirim ke browser.
+- Endpoint `POST /api/chat` ada di Cloudflare Worker (`worker/src/chat.js`), memanggil model `claude-opus-5-5` dengan effort `low`, plus fallback server-side otomatis kalau permintaan ditolak.
+- Key disimpan sebagai secret Worker (`npx wrangler secret put ANTHROPIC_API_KEY`), tidak pernah dikirim ke browser.
+- Pengaman biaya: batas 8 pesan/menit per IP, kuota harian per IP dan global (`CHAT_DAILY_PER_IP`, `CHAT_DAILY_GLOBAL` di `worker/wrangler.jsonc`).
 - Persona tiap warga dirakit dari state desa (`src/chat/brain.js`).
-- Kalau key tidak ada atau API gagal, otomatis kembali ke otak lokal.
-- Catatan: `npm run build` hanya menghasilkan file statis. Untuk produksi, endpoint `/api/chat` perlu dipasang di backend sendiri.
+- Kalau key tidak ada, kuota habis, atau API gagal, otomatis kembali ke otak lokal.
 
 ## State & integrasi backend
 Seluruh desa adalah satu objek JSON (`desa.state`): `clock`, `economy`, `weather`, `roads`, `water`, `trees`, `buildings`, `citizens`, `history`, `announcements`. Untuk menyambungkan ke backend (mis. warga baru dari komentar/follower media sosial):

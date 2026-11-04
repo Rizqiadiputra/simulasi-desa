@@ -20,8 +20,22 @@
 			"localConnectionString": "postgres://putra:local@localhost:5432/desa_majapahit"
 		}
 	],
-	// asal (origin) yang boleh memanggil API ini dari browser
+	// Batas burst chat: maks 8 pesan per 60 detik per IP (Workers Rate Limiting, gratis)
+	"ratelimits": [
+		{
+			"name": "CHAT_LIMITER",
+			"namespace_id": "1001",
+			"simple": { "limit": 8, "period": 60 }
+		}
+	],
 	"vars": {
-		"ALLOWED_ORIGINS": "https://radiputra.biz.id,http://localhost:5173"
+		// asal (origin) yang boleh memanggil API ini dari browser
+		"ALLOWED_ORIGINS": "https://radiputra.biz.id,http://localhost:5173",
+		// kuota chat Claude per hari (reset tiap tengah malam UTC)
+		"CHAT_DAILY_PER_IP": "60",
+		"CHAT_DAILY_GLOBAL": "300"
 	}
+	// Secret (tidak ditulis di sini): ANTHROPIC_API_KEY
+	//   online: npx wrangler secret put ANTHROPIC_API_KEY
+	//   lokal : isi worker/.dev.vars (lihat .dev.vars.example)
 }

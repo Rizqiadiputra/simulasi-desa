@@ -1,12 +1,13 @@
-// Layanan obrolan: coba Claude via /api/chat, kalau tidak tersedia pakai otak lokal.
+// Layanan obrolan: coba Claude via Worker /api/chat, kalau tidak tersedia pakai otak lokal.
 import { buildContext, systemPrompt, localReply, openingLine } from './brain.js';
+import { API_BASE } from '../data/api.js';
 
 export class ChatService {
   constructor(app) {
     this.app = app;
     this.llm = null; // null = belum dicek, true/false
     this.busy = false;
-    fetch('/api/chat/status').then((r) => (r.ok ? r.json() : { llm: false })).then((j) => { this.llm = !!j.llm; }).catch(() => { this.llm = false; });
+    fetch(`${API_BASE}/api/chat/status`).then((r) => (r.ok ? r.json() : { llm: false })).then((j) => { this.llm = !!j.llm; }).catch(() => { this.llm = false; });
   }
 
   log(id) {
@@ -38,7 +39,7 @@ export class ChatService {
     if (this.llm !== false) {
       try {
         const messages = this.log(c.id).slice(-16).map((m) => ({ role: m.from === 'me' ? 'user' : 'assistant', content: m.text }));
-        const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system: systemPrompt(x), messages }) });
+        const r = await fetch(`${API_BASE}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system: systemPrompt(x), messages }) });
         if (r.status === 503) this.llm = false;
         if (r.ok) { const j = await r.json(); if (j.reply) { reply = j.reply; src = 'claude'; this.llm = true; } }
       } catch { /* jaringan gagal -> lokal */ }

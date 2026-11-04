@@ -9,7 +9,6 @@
     "preview": "vite preview --host"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.4.0",
     "three": "^0.187.0"
   },
   "devDependencies": {

@@ -3,8 +3,9 @@
 import { SAVE_KEY, STATE_VERSION } from './config.js';
 import { createInitialState } from './initialState.js';
 
-// Dev: '/api/save' (di-proxy Vite ke wrangler dev). Produksi: isi VITE_SAVE_API dengan URL Worker.
-const API = import.meta.env.VITE_SAVE_API || '/api/save';
+import { API_BASE } from './api.js';
+
+const API = `${API_BASE}/api/save`;
 const PLAYER_KEY = 'desa-player-id';
 
 // ID acak per browser, supaya tiap pemain punya desanya sendiri di database

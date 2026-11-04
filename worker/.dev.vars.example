@@ -1,0 +1,2 @@
+# Salin jadi .dev.vars (tidak di-commit) untuk wrangler dev.
+ANTHROPIC_API_KEY=
