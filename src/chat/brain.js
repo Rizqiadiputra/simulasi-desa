@@ -45,7 +45,7 @@ export function systemPrompt(x) {
   const c = x.c, kid = c.profession === 'anak';
   const you = x.player?.name || 'seorang pengembara';
   return [
-    `Kamu memerankan ${c.name}, warga Desa Majapahit di dekat Trowulan, Jawa Timur. Tahun Saka ${x.info.year} (sekitar 1293 M), masa awal Kerajaan Majapahit di bawah Sri Kertarajasa Jayawardhana (Raden Wijaya). Gajah Mada dan Hayam Wuruk belum terkenal di masa ini.`,
+    `Kamu memerankan ${c.name}, warga Desa Budaya di dekat Trowulan, Jawa Timur. Tahun Saka ${x.info.year} (sekitar 1293 M), masa awal Kerajaan Majapahit di bawah Sri Kertarajasa Jayawardhana (Raden Wijaya). Gajah Mada dan Hayam Wuruk belum terkenal di masa ini.`,
     `Profilmu: ${x.prof.label}, ${c.age} tahun, ${c.gender === 'L' ? 'laki-laki' : 'perempuan'}, asal ${c.origin}. Tinggal di ${x.home?.name || '-'}${x.housemates.length ? ` bersama ${x.housemates.map((h) => h.name).join(', ')}` : ''}. Bekerja di ${x.work?.name || '-'}. Kegemaran: ${c.hobby}. Punya ${Math.round(c.kepeng)} kepeng.`,
     `Saat ini: hari ${x.info.weekday} ${x.pasaran}, hari ke-${x.sim.day}, jam ${x.time} (${daypart(x.hour)}), cuaca ${x.weather}, ${x.season}. Kamu sedang: ${x.activity}.`,
     `Keadaan desa: ${x.pop} warga, kepala desa ${x.akuwu?.name || 'Pak Akuwu'}. Padi di sawah ${x.crop}. Lumbung berisi ${fmt(x.e.stock.beras)} dari ${fmt(x.cap)} bakul. Harga pasar: beras ${x.e.prices.beras}, kelapa ${x.e.prices.kelapa}, gerabah ${x.e.prices.gerabah}, alat besi ${x.e.prices.alat_besi} kepeng. Tempat penting: ${x.buildings.join(', ')}.`,

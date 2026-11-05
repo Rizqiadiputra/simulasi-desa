@@ -1,4 +1,4 @@
-# Desa Majapahit
+# Desa Budaya
 
 Simulasi hidup sebuah desa era Majapahit (abad ke-14, sekitar Trowulan) dalam 3D low-poly. Peta desa bisa dijelajahi, dihuni warga, dan terus tumbuh. Terinspirasi dari kampungkomen.id.
 

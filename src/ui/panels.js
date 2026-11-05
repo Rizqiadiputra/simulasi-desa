@@ -79,7 +79,7 @@ export function prasasti(sim, c, statusText, opt = {}) {
       </div>
     </div>
     <div class="pr-now"><small>Kegiatan sekarang</small><div data-live-act="${esc(c.id)}">${esc(statusText)}</div></div>
-    <div class="pr-foot">Warga sejak hari ke-${c.sinceDay} · Desa Majapahit, Trowulan</div>
+    <div class="pr-foot">Warga sejak hari ke-${c.sinceDay} · Desa Budaya, Trowulan</div>
   </div>
   <div class="btns">
     ${opt.player ? `<button class="btn" data-profile="1">✏️ Ubah profil</button><button class="btn primary" data-walk="1">🚶 Jalan-jalan</button>` : `<button class="btn" data-follow="${esc(c.id)}">📍 Ikuti di peta</button>`}

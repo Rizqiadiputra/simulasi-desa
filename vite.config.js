@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig(({ mode }) => ({
-  // GitHub Pages project site: https://radiputra.biz.id/simulasi-desa/
-  base: mode === 'production' ? '/simulasi-desa/' : '/',
+  // Cloudflare Pages (desa-budaya.pages.dev) melayani game di root: '/'.
+  // GitHub Pages (radiputra.biz.id/simulasi-desa/) butuh BASE_PATH=/simulasi-desa/ (diset di workflow).
+  base: mode === 'production' ? process.env.BASE_PATH || '/' : '/',
   server: {
     host: true,
     port: 5173,

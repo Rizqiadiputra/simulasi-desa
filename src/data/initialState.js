@@ -26,7 +26,7 @@ export function createInitialState() {
   const r = mulberry32(1293); // tahun 1293: berdirinya Majapahit
   const state = {
     version: STATE_VERSION,
-    meta: { name: 'Desa Majapahit', createdAt: Date.now(), seed: 1293 },
+    meta: { name: 'Desa Budaya', createdAt: Date.now(), seed: 1293 },
     clock: { day: 1, minute: 6 * 60, savedAt: Date.now(), speed: 1 },
     economy: {
       kas: 900,
@@ -128,7 +128,7 @@ export function createInitialState() {
   for (const c of state.citizens) c.workId = findWorkplace(state, c.profession, c)?.id || null;
 
   // --- Riwayat & pengumuman pembuka ---
-  state.history.push({ id: ++state.counters.history, day: 1, minute: 360, text: 'Desa Majapahit didirikan di tepi Kanal Trowulan', type: 'desa', by: 'leluhur' });
+  state.history.push({ id: ++state.counters.history, day: 1, minute: 360, text: 'Desa Budaya didirikan di tepi Kanal Trowulan', type: 'desa', by: 'leluhur' });
   for (const b of state.buildings) {
     if (b.type === 'sawah' || b.type === 'rumah') continue;
     state.history.push({ id: ++state.counters.history, day: 1, minute: 360, text: `${b.name} berdiri sejak zaman leluhur`, buildingId: b.id, type: b.type, by: 'leluhur' });

@@ -30,7 +30,7 @@
 	],
 	"vars": {
 		// asal (origin) yang boleh memanggil API ini dari browser
-		"ALLOWED_ORIGINS": "https://radiputra.biz.id,http://localhost:5173",
+		"ALLOWED_ORIGINS": "https://desa-budaya.pages.dev,https://radiputra.biz.id,http://localhost:5173",
 		// kuota chat Claude per hari (reset tiap tengah malam UTC)
 		"CHAT_DAILY_PER_IP": "60",
 		"CHAT_DAILY_GLOBAL": "300"

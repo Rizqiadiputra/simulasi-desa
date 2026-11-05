@@ -1,7 +1,7 @@
 // Helper bersama: CORS, respons JSON, dan koneksi Postgres lewat Hyperdrive.
 import postgres from 'postgres';
 
-// CORS: game di radiputra.biz.id beda origin dengan Worker, jadi browser butuh izin eksplisit
+// CORS: game di desa-budaya.pages.dev / radiputra.biz.id beda origin dengan Worker, jadi browser butuh izin eksplisit
 export function corsHeaders(request, env) {
   const origin = request.headers.get('Origin') || '';
   const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());

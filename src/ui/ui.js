@@ -43,7 +43,7 @@ export class UI {
     this.root.innerHTML = `
       <header class="hud">
         <div class="hud-l">
-          <div class="hud-title">Desa Majapahit <span>— Hari ke-<b data-h="day">1</b></span></div>
+          <div class="hud-title">Desa Budaya <span>— Hari ke-<b data-h="day">1</b></span></div>
           <div class="hud-sub"><b data-h="clock">06:00</b> · <span data-h="cal"></span> · <span data-h="wx"></span></div>
         </div>
         <div class="hud-r">

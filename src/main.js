@@ -1,4 +1,4 @@
-// Desa Majapahit — titik masuk: merangkai simulasi, scene 3D, NPC, dan UI.
+// Desa Budaya — titik masuk: merangkai simulasi, scene 3D, NPC, dan UI.
 import { createStage, IS_MOBILE } from './scene/stage.js';
 import { Terrain } from './scene/terrain.js';
 import { Vegetation } from './scene/vegetation.js';
