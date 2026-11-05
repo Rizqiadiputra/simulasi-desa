@@ -112,3 +112,54 @@ export function chirp(ctx, out, t, { from = 2600, to = 3800, dur = 0.09, gain = 
   o.frequency.exponentialRampToValueAtTime(to, t + dur);
   o.connect(g); o.start(t); o.stop(t + dur + 0.05);
 }
+
+// ------------------------------------------------------------------ kuda
+// Tapal kuda: dentum rendah + klik keras di tanah
+export function hoof(ctx, out, t, gain = 0.15) {
+  wood(ctx, out, t, 260 + Math.random() * 80, gain, 0.05);
+  noiseHit(ctx, out, t, { freq: 2200 + Math.random() * 800, q: 1.5, gain: gain * 0.5, decay: 0.02 });
+}
+
+// Dengusan: hembusan napas lewat bibir yang bergetar ("brrr")
+export function snort(ctx, out, t, gain = 0.2) {
+  const src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx);
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 650; bp.Q.value = 0.9;
+  const g = ctx.createGain(); g.gain.value = 0;
+  const flutter = ctx.createOscillator(), depth = ctx.createGain();
+  flutter.frequency.value = 28; depth.gain.value = gain * 0.5;
+  flutter.connect(depth).connect(g.gain);
+  const dur = 0.35 + Math.random() * 0.25;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain * 0.6, t + 0.04);
+  g.gain.linearRampToValueAtTime(0, t + dur);
+  src.connect(bp).connect(g).connect(out);
+  src.start(t, Math.random()); src.stop(t + dur + 0.05);
+  flutter.start(t); flutter.stop(t + dur + 0.05);
+}
+
+// Ringkikan: nada tinggi bergetar cepat yang naik lalu turun bergelombang
+export function whinny(ctx, out, t, gain = 0.12) {
+  const dur = 1 + Math.random() * 0.4, f0 = 700 + Math.random() * 200;
+  const o = ctx.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(f0 * 0.8, t);
+  o.frequency.linearRampToValueAtTime(f0 * 1.45, t + 0.18);
+  o.frequency.linearRampToValueAtTime(f0 * 1.1, t + dur * 0.6);
+  o.frequency.linearRampToValueAtTime(f0 * 0.6, t + dur);
+  // vibrato cepat khas ringkikan
+  const vib = ctx.createOscillator(), vd = ctx.createGain();
+  vib.frequency.setValueAtTime(9, t); vib.frequency.linearRampToValueAtTime(14, t + dur);
+  vd.gain.value = f0 * 0.09;
+  vib.connect(vd).connect(o.frequency);
+  // filter "mulut"
+  const f1 = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = 1300; f1.Q.value = 1.4;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + 0.08);
+  g.gain.setValueAtTime(gain, t + dur * 0.55);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f1).connect(lp).connect(g).connect(out);
+  o.start(t); o.stop(t + dur + 0.05);
+  vib.start(t); vib.stop(t + dur + 0.05);
+  snort(ctx, out, t + dur - 0.05, gain * 0.9); // diakhiri hembusan
+}
