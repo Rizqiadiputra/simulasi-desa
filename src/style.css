@@ -266,3 +266,8 @@ h4 { margin: 16px 0 8px; font-family: 'Marcellus', serif; font-size: 16px; color
 .slot-btns { flex: none; display: flex; flex-direction: column; gap: 6px; }
 .slot-name { display: flex; flex-direction: column; gap: 4px; font-weight: 700; font-size: 13px; }
 .slot-name input { border: 1px solid #d8c4a4; border-radius: 10px; padding: 9px 11px; font-size: 14px; font: inherit; font-weight: 400; }
+
+/* pengaturan suara */
+.set-h { margin: 18px 0 6px; font-size: 15px; }
+.vol { display: flex; flex-direction: column; gap: 4px; font-weight: 700; font-size: 13px; margin: 8px 0; }
+.vol input { width: 100%; accent-color: var(--bata); }

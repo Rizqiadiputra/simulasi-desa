@@ -50,6 +50,7 @@ export class UI {
           <span class="pill" title="Jumlah warga">👥 <b data-h="pop">0</b></span>
           <span class="pill coin-pill" title="Kas desa (kepeng)"><i class="kepeng"></i><b data-h="kas">0</b></span>
           ${this.sim.clock.realtime ? '' : '<button class="pill btn-speed" data-speed="1" title="Kecepatan waktu">▶ 1×</button>'}
+          <button class="pill" data-mute="1" title="Suara nyala / mati">🔊</button>
           <button class="pill" data-settings="1" title="Pengaturan">⚙</button>
         </div>
       </header>
@@ -83,14 +84,16 @@ export class UI {
     this.root.querySelectorAll('[data-h]').forEach((el) => (this.h[el.dataset.h] = el));
     this.sheet = this.$('.sheet');
     this.body = this.$('.sheet-body');
-    this.root.addEventListener('click', (e) => this.onClick(e));
+    this.root.addEventListener('click', (e) => { if (e.target.closest('button')) this.app.audio?.click(); this.onClick(e); });
     this.root.addEventListener('keydown', (e) => {
       if (e.target.dataset?.chatinput && e.key === 'Enter' && !e.isComposing) { e.preventDefault(); this.sendChat(); }
     });
     this.root.addEventListener('input', (e) => {
+      if (e.target.dataset.vol) { this.app.audio.setVolume(e.target.dataset.vol, e.target.value / 100); return; }
       if (e.target.dataset.search) { this.query = e.target.value; const pos = e.target.selectionStart; this.refreshView(); const inp = this.$('[data-search]'); inp?.focus(); inp?.setSelectionRange(pos, pos); }
     });
     this.updateSpeedBtn();
+    this.updateMuteBtn();
     this.bindJoystick();
     setTimeout(() => this.$('.hint')?.classList.add('fade'), 6000);
   }
@@ -113,6 +116,7 @@ export class UI {
     if (d.sugg) return this.sendChat(d.sugg);    if (d.filter) { this.filter = d.filter; return this.refreshView(); }
     if (d.speed) return this.cycleSpeed();
     if (d.settings) return this.open({ kind: 'settings' });
+    if (d.mute) { const m = this.app.audio.toggleMute(); this.updateMuteBtn(); return this.toast(m ? '🔇 Suara dimatikan' : '🔊 Suara dinyalakan'); }
     if (d.buildmenu) return this.open({ kind: 'buildmenu' });
     if (d.pick) return this.startBuild(d.pick);
     if (d.invite) return this.open({ kind: 'invite' });
@@ -236,7 +240,11 @@ export class UI {
           <button class="btn" data-export="1">⬇️ Ekspor data desa (JSON)</button>
           <button class="btn danger" data-reset="1">🗑️ Mulai dari Awal</button>
         </div>
-        <p class="muted small">Mulai dari Awal menghapus desa yang sedang berjalan. Slot di Simpan Game tetap aman dan bisa dimuat lagi.</p>`;
+        <p class="muted small">Mulai dari Awal menghapus desa yang sedang berjalan. Slot di Simpan Game tetap aman dan bisa dimuat lagi.</p>
+        <h3 class="set-h">🔊 Suara</h3>
+        <label class="vol">🎶 Musik gamelan<input type="range" min="0" max="100" data-vol="music" value="${Math.round(this.app.audio.prefs.music * 100)}"></label>
+        <label class="vol">🐦 Efek & suasana<input type="range" min="0" max="100" data-vol="sfx" value="${Math.round(this.app.audio.prefs.sfx * 100)}"></label>
+        <p class="muted small">Musik dan suara dibuat langsung oleh kode (tangga nada slendro), tanpa file audio. Tombol 🔊 di atas untuk mematikan cepat.</p>`;
     } else if (v.kind === 'slots') {
       title = v.mode === 'save' ? '💾 Simpan Game' : '📂 Muat Game';
       html = this.slotsView(v);
@@ -282,7 +290,7 @@ export class UI {
     if (inp && text === undefined) inp.value = '';
     const p = this.app.chat.send(c, msg);
     this.renderChatLog();
-    await p;
+    if (await p) this.app.audio?.reply();
     this.renderChatLog();
     saveState(this.sim.state);
   }
@@ -328,7 +336,11 @@ export class UI {
   }
 
   // ------------------------------------------------------------ toast
+  updateMuteBtn() { const b = this.$('[data-mute]'); if (b) b.textContent = this.app.audio?.prefs.muted ? '🔇' : '🔊'; }
+
   toast(msg, kind = 'info') {
+    if (kind === 'event') this.app.audio?.event();
+    else if (kind === 'bad') this.app.audio?.bad();
     const box = this.$('.toasts');
     const el = document.createElement('div');
     el.className = `toast ${kind}`;
@@ -509,6 +521,7 @@ export class UI {
     const res = this.sim.addBuilding({ type: b.type, ci: b.ci, cj: b.cj, rot: b.rot, by: 'kamu' });
     if (!res.ok) return this.toast(res.reason, 'bad');
     this.toast(`🎉 ${res.building.name} berdiri! Tercatat di Riwayat Pembangunan.`, 'good');
+    this.app.audio?.build();
     saveState(this.sim.state);
     this.cancelBuild();
   }

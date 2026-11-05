@@ -6,7 +6,7 @@ Dicatat 2026-11-04. Belum dikerjakan.
 - Tampilkan ikon tombol panah (atas, bawah, kiri, kanan) di layar.
 - Tombol yang sedang ditekan menyala merah, misalnya tekan ↑ maka panah atas jadi merah (seperti indikator kontrol di game open-world ala GTA).
 
-## 2. Audio
+## 2. ✅ Audio — selesai 2026-11-05 (prosedural, Web Audio API)
 - Musik latar (background music).
 - Efek suara (sound effect): langkah kaki, suara lingkungan, klik UI, dan lain-lain.
 

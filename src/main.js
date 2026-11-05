@@ -13,6 +13,7 @@ import { UI } from './ui/ui.js';
 import { Player } from './player/player.js';
 import { ChatService } from './chat/chat.js';
 import { VehicleManager } from './vehicles/manager.js';
+import { SoundEngine } from './audio/audio.js';
 import { cellToWorld } from './data/config.js';
 import * as THREE from 'three';
 
@@ -54,7 +55,7 @@ sim.on('hour', () => buildings.updateRice());
 const npcs = new NPCManager(scene, sim, { shadows: !IS_MOBILE });
 sim.on('citizenAdded', (c, o) => npcs.add(c, { arrive: o?.arrive, teleport: !o?.arrive }));
 sim.on('citizenChanged', (c) => npcs.refreshLook(c));
-sim.on('harvest', () => buildings.updateRice());
+sim.on('harvest', () => { buildings.updateRice(); app.audio?.harvest(); });
 
 // ---------------------------------------------------------------- loop
 const app = { state, sim, stage, terrain, vegetation, sky, buildings, torches, npcs, refreshTorches };
@@ -85,6 +86,7 @@ app.api = {
 app.player = new Player(app);
 app.chat = new ChatService(app);
 app.vehicles = new VehicleManager(app);
+app.audio = new SoundEngine(app);
 const ui = new UI(app);
 app.ui = ui;
 if (sim.offlineMinutes) setTimeout(() => ui.toast(`🌙 Selama kamu pergi, ${Math.round(sim.offlineMinutes / 60)} jam desa telah berlalu`, 'event'), 900);
@@ -124,6 +126,7 @@ function frame(now) {
     if (n) { followTmp.set(n.x, 0, n.z).sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(followTmp); camera.position.add(followTmp); }
   }
   ui.update(dt);
+  app.audio.update(dt);
   stage.updateFly(dt);
   if (!app.player.firstPerson) controls.update();
   renderer.render(scene, camera);

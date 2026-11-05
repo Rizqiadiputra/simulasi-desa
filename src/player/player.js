@@ -206,6 +206,7 @@ export class Player {
     if (!this.vehicle) { if (n.stamina < 8) return this.app.ui?.toast('😮‍💨 Terlalu capek untuk loncat', 'bad'); n.stamina -= 8; }
     p.vy = JUMP;
     this.grounded = false;
+    this.app.audio?.jump();
   }
 
   // Tinggi tanah dasar (tanpa bangunan)
@@ -287,6 +288,10 @@ export class Player {
         if (stuck || !this.blockedAt(p.x, p.z + dz, feet)) p.z += dz;
       }
       this.phase += dt * (this.grounded ? 11 : 3);
+      // suara langkah tiap kali kaki menapak (setengah putaran ayunan)
+      const stepN = Math.floor(this.phase / Math.PI);
+      if (stepN !== this.lastStep && this.grounded) this.app.audio?.step({ riding, running: run });
+      this.lastStep = stepN;
     }
     if (!this.moving) this.running = false;
     if (this.active) this.needs.update(dt, { moving: this.moving, running: this.running, riding: V?.type === 'kuda' });
@@ -420,6 +425,7 @@ export class Player {
     }
     this.vehicle = v;
     this.eyeY = undefined;
+    this.app.audio?.mount(v.type);
   }
 
   dismount() {
@@ -441,6 +447,7 @@ export class Player {
     }
     this.vehicle = null;
     this.eyeY = undefined;
+    this.app.audio?.dismount();
   }
 
   physics(dt) {
@@ -455,6 +462,7 @@ export class Player {
     const sup = this.supportAt(p.x, p.z, p.y);
     if (ny <= sup) {
       if (!this.grounded && p.vy < -9) this.app.ui?.toast('💥 Bruk! Mendarat keras', 'info');
+      if (!this.grounded && p.vy < -3) this.app.audio?.land(p.vy < -9);
       ny = sup; p.vy = 0; this.grounded = true;
     } else if (ny > sup + 0.02) this.grounded = false;
     p.y = ny;
@@ -494,6 +502,7 @@ export class Player {
   interact() {
     const nb = this.nearby;
     if (!nb) return;
+    if (nb.kind !== 'turun' && nb.kind !== 'busy') this.app.audio?.interact();
     const ui = this.app.ui;
     if (this.needs.busy || nb.kind === 'busy') return;
     if (nb.kind === 'need') return this.needs.act(nb);

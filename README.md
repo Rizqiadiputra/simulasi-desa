@@ -25,6 +25,11 @@ npm run build
   - Tab Peta | Pengumuman | Riwayat | Warga.
   - Prasasti Warga, panel info bangunan, chat dengan warga, mode Bangun, dan Undang Warga.
 - **Waktu**: mengikuti jam asli perangkat (1 hari desa = 1 hari nyata, jam 20.00 di HP = 20.00 di desa). Waktu tetap berjalan saat aplikasi ditutup (maksimal 30 hari dikejar). Mode cepat bisa dinyalakan lagi lewat `TIME_MODE = 'fast'` di `src/data/config.js`.
+- **Suara** (semua dibuat kode lewat Web Audio API, tanpa file audio):
+  - Musik gamelan generatif bertangga nada slendro: saron, bonang, kenong, kempul, gong, kendang. Pelan dan lembut di malam hari, lebih ramai saat acara desa.
+  - Suasana: hujan, guntur, angin, aliran kanal dan gemeretak obor (makin keras saat didekati), jangkrik dan kodok di malam hari, kicau burung di pagi hari.
+  - Efek: langkah kaki, tapal kuda, loncat, mendarat, interaksi (E), naik/turun kendaraan, klik tombol, bangunan berdiri, panen, pengumuman, dan balasan chat.
+  - Tombol 🔊 di header untuk mute, slider volume Musik dan Efek di ⚙ Pengaturan.
 - **Karakter pemain & ngobrol**:
   - Buat profil, lalu jalan-jalan dengan W/S atau ↑↓ (atau joystick). A/D atau ← → memutar kamera, Space untuk loncat, C untuk ganti kamera (Atas / Belakang / Mata).
   - Dekati warga lalu tekan E (atau tombol 💬 di Prasasti) untuk ngobrol bebas lewat chat.
